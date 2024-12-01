@@ -33,7 +33,7 @@ class VoiceProcessor:
             # Use with_streaming_response for the audio generation
             with self.client.audio.speech.with_streaming_response.create(
                 model="tts-1",
-                voice="alloy",  # Using echo voice for clear and friendly tone
+                voice="nova",  # Using echo voice for clear and friendly tone
                 input=text
             ) as response:
                 # Initialize pygame mixer if not already done
