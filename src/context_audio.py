@@ -15,7 +15,7 @@ import tempfile
 import sounddevice as sd
 import numpy as np
 from main import recognize_signs
-
+from voice_processor import VoiceProcessor
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -30,6 +30,7 @@ TEXT_DISPLAY_DURATION = timedelta(seconds=10)
 voice_triggered = False
 sign_text = ""
 process_sign_language = False
+voice_processor = VoiceProcessor()
 
 # Initialize pygame mixer for audio playback
 pygame.mixer.init()
@@ -73,11 +74,21 @@ def analyze_image(frame):
     except Exception as e:
         print(f"Error in image analysis: {e}")
 
+def list_all_audio_devices():
+    # List Input Devices
+    print("\nAvailable Audio Input Devices:")
+    print("------------------------------")
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        print(f"Index {index}: {name}")
+    print("------------------------------")
+
+# Add this line after pygame.mixer.init()
+list_all_audio_devices()
+
 
 def audio_processing():
     recognizer = sr.Recognizer()
-    
-    mic_index = 0
+    mic_index = 0 #0 for MAC MIC, 3 for MAC SPEAKER TO MIC 
     
     while True:
         try:
@@ -87,7 +98,7 @@ def audio_processing():
                 try:
                     text = recognizer.recognize_google(audio)
                     # Check for trigger phrases
-                    trigger_phrases = ["describe surround", "describe surrounding", "describe surroundings", "what's around", "whats around", "describe the room"]
+                    trigger_phrases = ["describe surround", "describe my surroundings", "describe surrounding", "describe surroundings", "what's around", "whats around", "describe the room"]
 
                     if "sign language" in text.lower():
                         text_queue.put("Recognizing sign language...")
@@ -111,11 +122,11 @@ audio_thread = threading.Thread(target=audio_processing, daemon=True)
 audio_thread.start()
 
 # Initialize video capture
-cap = cv2.VideoCapture(2)  # Try index 2 first
+cap = cv2.VideoCapture(1)  #0 for MAC CAMERA, 1 for OBS CAMERA
 
-"""if not cap.isOpened():
+if not cap.isOpened():
     print("Failed to open camera 2, trying camera 1...")
-    cap = cv2.VideoCapture(1)  # Try index 1 as fallback"""
+    cap = cv2.VideoCapture(1)  # Try index 1 as fallback
 
 if not cap.isOpened():
     print("Failed to open OBS camera, falling back to default camera...")
@@ -133,27 +144,20 @@ def text_to_speech(text):
             model="tts-1",
             voice="nova",
             input=text,
-            response_format="mp3",
+            response_format="pcm",  # Changed to PCM format
+            speed=1.0
         )
         
-        # Save the audio to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
-            temp_file.write(response.content)
-            temp_file_path = temp_file.name
+        # Convert audio data to numpy array
+        audio_data = np.frombuffer(response.content, dtype=np.int16)
         
-        # Play the audio using pygame
-        pygame.mixer.music.load(temp_file_path)
-        pygame.mixer.music.play()
-        
-        # Wait for the audio to finish
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
-            
-        # Clean up the temporary file
-        os.unlink(temp_file_path)
+        # Play audio directly using sounddevice
+        sd.play(audio_data, samplerate=24000)  # OpenAI TTS uses 24kHz
+        sd.wait()  # Wait until audio is finished playing
             
     except Exception as e:
         print(f"Error in text-to-speech conversion: {e}")
+        
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -168,9 +172,13 @@ while cap.isOpened():
     except queue.Empty:
         pass
     if process_sign_language:
-        print("yute2")
-        sign_text = recognize_signs(0)
-        print(sign_text)
+        sign_text = recognize_signs(1) #0 for MAC CAMERA, 1 for OBS CAMERA
+        threading.Thread(
+            target=lambda: voice_processor.text_to_speech(
+                voice_processor.correct_sign_output(" ".join(sign_text))
+            ),
+            daemon=True
+        ).start()
         process_sign_language = False  # Reset the flag
 
     # Only analyze image when voice triggered

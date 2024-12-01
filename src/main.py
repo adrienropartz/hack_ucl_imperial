@@ -256,6 +256,13 @@ def recognize_signs(capture):
             if key == ord("c"):
                 output.clear()
 
+<<<<<<< Updated upstream
+=======
+            cv2.imshow('MediaPipe Holistic with Speech and Vision', image)
+
+
+
+>>>>>>> Stashed changes
     return output
 
 

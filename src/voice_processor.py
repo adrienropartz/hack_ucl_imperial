@@ -76,7 +76,7 @@ class VoiceProcessor:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a helpful assistant that primarily corrects spelling mistakes and common word substitutions, while maintaining the original meaning. Focus on fixing misspelled words and only make minimal grammatical adjustments when necessary. Be concise."
+                        "content": "given a phrase you correct the spelling, make sure to strip any random letters as these are ASL errors. your output must be only the phrase and nothing else."
                     },
                     {
                         "role": "user",
@@ -124,7 +124,8 @@ class VoiceProcessor:
 
 def main():
     processor = VoiceProcessor()
-    
+    processor.text_to_speech("I love you")
+    return 
     # Extended example outputs from sign language model with spelling mistakes
     example_outputs = [
         # Common daily activities
@@ -184,3 +185,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    
