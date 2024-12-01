@@ -1,0 +1,9 @@
+facebook-business
+opencv-python
+numpy
+m3u8
+requests
+pillow
+python-dotenv
+mistralai
+openai>=1.0.0
