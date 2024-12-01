@@ -52,8 +52,7 @@ def parse_opt():
     return opt
 
 
-def get_output(idx, _output, output, autocorrect):
-    global TIMING
+def get_output(idx, _output, output, autocorrect, TIMING):
     key = []
     for i in range(len(_output[idx])):
         character = _output[idx][i]
@@ -82,7 +81,7 @@ def get_output(idx, _output, output, autocorrect):
 
 
 def recognize_gesture(
-    image, results, model_letter_path, mp_drawing, current_hand, _output, output
+    image, results, model_letter_path, mp_drawing, current_hand, _output, output, autocorrect, TIMING
 ):
     multi_hand_landmarks = results.multi_hand_landmarks
     multi_handedness = results.multi_handedness
@@ -162,7 +161,7 @@ def recognize_gesture(
     # create "SPACE"
     if isDecreased:
         if current_hand == 1:
-            get_output(0, _output, output, autocorrect)
+            get_output(0, _output, output, autocorrect, TIMING)
 
     # append gesture
     else:
@@ -180,6 +179,8 @@ def recognize_gesture(
 
 def recognize_signs(capture_idx: int):
     current_hand = 0
+    autocorrect = False
+    TIMING = 8
     output = []
     _output = [[], []]
     capture = cv2.VideoCapture(capture_idx)
@@ -213,6 +214,8 @@ def recognize_signs(capture_idx: int):
                     current_hand,
                     _output,
                     output,
+                    autocorrect,
+                    TIMING
                 )
                 print("new, out", output)
             except Exception as error:
@@ -245,8 +248,7 @@ def recognize_signs(capture_idx: int):
             if key == ord("c"):
                 output.clear()
 
-    cv2.destroyAllWindows()
-    capture.release()
+
     return output
 
 
