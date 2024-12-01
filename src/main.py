@@ -54,7 +54,6 @@ def parse_opt():
 
 def get_output(idx, _output, output, autocorrect):
     global TIMING
-    print("came")
     key = []
     for i in range(len(_output[idx])):
         character = _output[idx][i]
@@ -74,13 +73,11 @@ def get_output(idx, _output, output, autocorrect):
 
     # Autocorrect Misspelled Word
     text = spell(text) if autocorrect else text
-    print(text)
 
     # Add word to output list
     if text != "":
         _output[idx] = []
         output.append(text.title())
-        print("appended", output)
     return None
 
 
@@ -183,6 +180,8 @@ def recognize_gesture(
 
 def recognize_signs(capture_idx: int):
     current_hand = 0
+    output = []
+    _output = [[], []]
     capture = cv2.VideoCapture(capture_idx)
     with mp_hands.Hands(
         min_detection_confidence=min_detection_confidence,
@@ -230,6 +229,7 @@ def recognize_signs(capture_idx: int):
 
             key = cv2.waitKey(5) & 0xFF
 
+            # symbol to break
             if output and output[-1] == "Z":
                 break
 
@@ -247,6 +247,7 @@ def recognize_signs(capture_idx: int):
 
     cv2.destroyAllWindows()
     capture.release()
+    return output
 
 
 if __name__ == "__main__":
@@ -259,7 +260,6 @@ if __name__ == "__main__":
     output = []
     quitApp = False
 
-    frame_array = []
     current_hand = 0
 
     global TIMING, autocorrect
@@ -268,172 +268,6 @@ if __name__ == "__main__":
     print(f"Timing Threshold is {TIMING} frames.")
     print(f"Using Autocorrect: {autocorrect}")
 
-    recognize_signs(0)
+    out = recognize_signs(0)
+    print("HERE", out)
     sys.exit()
-
-    # Get video source path
-    if source == None or source.isnumeric():
-        video_path = 0
-    else:
-        video_path = source
-
-    # Webcam Arguments
-    fps = opt.fps
-    webcam_width = opt.width
-    webcam_height = opt.height
-
-    _output = [[], []]
-    output = []
-    quitApp = False
-
-    frame_array = []
-    current_hand = 0
-
-    # Webcam Input
-    if video_path == 0:
-        capture = cv2.VideoCapture(video_path)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, webcam_height)
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, webcam_width)
-        capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        capture.set(cv2.CAP_PROP_FPS, fps)
-
-        # Press 'r' if you are ready
-        while True:
-            success, frame = capture.read()
-            frame = cv2.flip(frame, 1)
-
-            # setup text
-            font = cv2.FONT_HERSHEY_DUPLEX
-            text = 'Press "R" when ready'
-
-            # get boundary of this text
-            textsize = cv2.getTextSize(text, font, 1.3, 3)[0]
-
-            # get coords based on boundary
-            textX = (frame.shape[1] - textsize[0]) // 2
-            textY = (frame.shape[0] + textsize[1]) // 2
-
-            cv2.putText(frame, text, (textX, textY), font, 1.3, GREEN, 3, cv2.LINE_AA)
-            cv2.imshow("Gesture Recognition:", frame)
-
-            # User Input from Keyboard
-            key = cv2.waitKey(5) & 0xFF
-            if key == ord("r"):
-                break
-
-            # Press 'Esc' to quit
-            if key == 27:
-                quitApp = True
-                break
-
-        # Remove starter window
-        cv2.destroyAllWindows()
-        if quitApp == True:
-            capture.release()
-            quit()
-
-    # Video Input
-    else:
-        capture = cv2.VideoCapture(video_path)
-
-    with mp_hands.Hands(
-        min_detection_confidence=min_detection_confidence,
-        min_tracking_confidence=min_tracking_confidence,
-        max_num_hands=MAX_HANDS,
-    ) as hands:
-        while capture.isOpened():
-            success, image = capture.read()
-            if not success:
-                if video_path == 0:
-                    print("Ignoring empty camera frame.")
-                    continue
-                else:
-                    print("Video ends.")
-                    break
-
-            # Flip the image horizontally for a later selfie-view display, and convert the BGR image to RGB
-            if video_path == 0:
-                image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
-            else:
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                frame_width = int(capture.get(3))  # get video frame width
-                frame_height = int(capture.get(4))  # get video frame height
-
-            # To improve performance, optionally mark the image as not writeable to pass by reference
-            image.flags.writeable = False
-            results = hands.process(image)
-
-            # Draw the hand annotations on the image
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
-            try:
-                image = recognize_gesture(
-                    image,
-                    results,
-                    model_letter_path,
-                )
-            except Exception as error:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                print(f"{error}, line {exc_tb.tb_lineno}")
-
-            # Show output in Top-Left corner
-            output_text = str(output)
-            output_size = cv2.getTextSize(output_text, FONT, 0.5, 2)[0]
-            cv2.rectangle(
-                image, (5, 0), (10 + output_size[0], 10 + output_size[1]), YELLOW, -1
-            )
-            cv2.putText(image, output_text, (10, 15), FONT, 0.5, BLACK, 2)
-
-            # Save each frames to GIF
-            cv2.imshow("American Sign Language", image)
-            frame_array.append(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-            key = cv2.waitKey(5) & 0xFF
-
-            # Press 'Esc' to quit
-            if key == 27:
-                break
-
-            # Press 'Backspace' to delete last word
-            if key == 8:
-                output.pop()
-
-            # Press 's' to save result
-            if key == ord("s"):
-                saveGIF = True
-                saveVDO = True
-                break
-
-            # Press 'c' to clear output
-            if key == ord("c"):
-                output.clear()
-
-    cv2.destroyAllWindows()
-    capture.release()
-
-    # Display result
-    print(f"Gesture Recognition:\n{' '.join(output)}")
-
-    # Save GIF Result (.gif)
-    if saveGIF == True:
-        print(f"Saving GIF Result..")
-        save_gif(frame_array, fps=fps, output_dir="./assets/result_ASL.gif")
-
-    # Save Video Result (.mp4)
-    if saveVDO == True:
-        print(f"Saving Video Result..")
-
-        if video_path == 0:
-            width = webcam_width
-            height = webcam_height
-        else:
-            width = frame_width
-            height = frame_height
-
-        save_video(
-            frame_array,
-            fps=fps,
-            width=width,
-            height=height,
-            output_dir="./assets/result_ASL.mp4",
-        )
