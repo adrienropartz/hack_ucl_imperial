@@ -25,9 +25,9 @@ WHITE = (255, 255, 255)
 
 # Constants
 FONT = cv2.FONT_HERSHEY_SIMPLEX
-MAX_HANDS = 1  # @param {type: "integer"}
-min_detection_confidence = 0.6  # @param {type:"slider", min:0, max:1, step:0.01}
-min_tracking_confidence = 0.5  # @param {type:"slider", min:0, max:1, step:0.01}
+MAX_HANDS = 1
+min_detection_confidence = 0.6
+min_tracking_confidence = 0.5
 
 MODEL_PATH = "./classifier"
 model_letter_path = f"{MODEL_PATH}/classify_letter_model.p"
@@ -81,7 +81,15 @@ def get_output(idx, _output, output, autocorrect, TIMING):
 
 
 def recognize_gesture(
-    image, results, model_letter_path, mp_drawing, current_hand, _output, output, autocorrect, TIMING
+    image,
+    results,
+    model_letter_path,
+    mp_drawing,
+    current_hand,
+    _output,
+    output,
+    autocorrect,
+    TIMING,
 ):
     multi_hand_landmarks = results.multi_hand_landmarks
     multi_handedness = results.multi_handedness
@@ -177,13 +185,13 @@ def recognize_gesture(
     return current_hand, image
 
 
-def recognize_signs(capture_idx: int):
+def recognize_signs(capture):
     current_hand = 0
     autocorrect = False
     TIMING = 8
     output = []
     _output = [[], []]
-    capture = cv2.VideoCapture(capture_idx)
+    # capture = cv2.VideoCapture(capture_idx)
     with mp_hands.Hands(
         min_detection_confidence=min_detection_confidence,
         min_tracking_confidence=min_tracking_confidence,
@@ -215,7 +223,7 @@ def recognize_signs(capture_idx: int):
                     _output,
                     output,
                     autocorrect,
-                    TIMING
+                    TIMING,
                 )
                 print("new, out", output)
             except Exception as error:
@@ -248,7 +256,6 @@ def recognize_signs(capture_idx: int):
             if key == ord("c"):
                 output.clear()
 
-
     return output
 
 
@@ -270,6 +277,10 @@ if __name__ == "__main__":
     print(f"Timing Threshold is {TIMING} frames.")
     print(f"Using Autocorrect: {autocorrect}")
 
-    out = recognize_signs(0)
+    capture = cv2.VideoCapture(0)
+    out = recognize_signs(capture)
     print("HERE", out)
+
+    cv2.destroyAllWindows()
+    capture.release()
     sys.exit()
