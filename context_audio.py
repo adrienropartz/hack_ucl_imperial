@@ -16,13 +16,10 @@ import sounddevice as sd
 import numpy as np
 #import recognize_signs from sign_model
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Initialize queues and variables
 text_queue = queue.Queue()
 vision_queue = queue.Queue()
 last_text = ""
@@ -31,6 +28,9 @@ text_timestamp = datetime.now()
 vision_timestamp = datetime.now()
 TEXT_DISPLAY_DURATION = timedelta(seconds=10)
 voice_triggered = False
+
+is_recognizing_signs = False
+sign_recognition_lock = threading.Lock()
 
 # Initialize pygame mixer for audio playback
 pygame.mixer.init()
@@ -74,23 +74,12 @@ def analyze_image(frame):
     except Exception as e:
         print(f"Error in image analysis: {e}")
 
-def audio_processing():
+def audio_processing(cap):
     recognizer = sr.Recognizer()
-    # List available audio devices and find OBS virtual output
-    print("Available audio devices:")
-    for index, name in enumerate(sr.Microphone.list_microphone_names()):
-        print(f"Microphone {index}: {name}")
     
-    # Try to find OBS or virtual audio device
-    obs_index = None
-    for index, name in enumerate(sr.Microphone.list_microphone_names()):
-        if 'obs' in name.lower() or 'virtual' in name.lower():
-            obs_index = index
-            print(f"Found OBS virtual audio device: {name}")
-            break
+
     
-    # Use OBS virtual output if found, otherwise fall back to default
-    mic_index = obs_index if obs_index is not None else None
+    mic_index = 1
     
     while True:
         try:
@@ -100,8 +89,15 @@ def audio_processing():
                 try:
                     text = recognizer.recognize_google(audio)
                     # Check for trigger phrases
-                    trigger_phrases = ["give me more info", "describe surroundings", "what's around", "describe the room"]
-                    if any(phrase in text.lower() for phrase in trigger_phrases):
+                    trigger_phrases = ["describe surrounding", "describe surroundings", "what's around", "whats around", "describe the room"]
+
+                    if "sign language" in text.lower():
+                        text_queue.put("Recognizing sign language...")
+                        global sign_text, is_recognizing_signs
+                        is_recognizing_signs = True
+                        #sign_text = recognize_signs()
+                        is_recognizing_signs = False
+                    elif any(phrase in text.lower() for phrase in trigger_phrases):
                         text_queue.put("Analyzing surroundings...")
                         global voice_triggered
                         voice_triggered = True
@@ -140,7 +136,7 @@ def text_to_speech(text):
         
         response = client.audio.speech.create(
             model="tts-1",
-            voice="alloy",
+            voice="nova",
             input=text,
             response_format="mp3",
         )
