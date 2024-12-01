@@ -1,0 +1,9 @@
+opencv-python
+SpeechRecognition
+openai
+python-dotenv
+Pillow
+pygame
+sounddevice
+numpy
+pyaudio
