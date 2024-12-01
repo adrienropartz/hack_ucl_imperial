@@ -76,9 +76,25 @@ def analyze_image(frame):
 
 def audio_processing():
     recognizer = sr.Recognizer()
+    # List available audio devices and find OBS virtual output
+    print("Available audio devices:")
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        print(f"Microphone {index}: {name}")
+    
+    # Try to find OBS or virtual audio device
+    obs_index = None
+    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+        if 'obs' in name.lower() or 'virtual' in name.lower():
+            obs_index = index
+            print(f"Found OBS virtual audio device: {name}")
+            break
+    
+    # Use OBS virtual output if found, otherwise fall back to default
+    mic_index = obs_index if obs_index is not None else None
+    
     while True:
         try:
-            with sr.Microphone() as source:
+            with sr.Microphone(device_index=mic_index) as source:
                 recognizer.adjust_for_ambient_noise(source)
                 audio = recognizer.listen(source)
                 try:
@@ -88,8 +104,8 @@ def audio_processing():
                     if any(phrase in text.lower() for phrase in trigger_phrases):
                         text_queue.put("Analyzing surroundings...")
                         global voice_triggered, last_vision_analysis
-                        voice_triggered = True  # Set the trigger flag
-                        last_vision_analysis = 0  # Force immediate vision analysis
+                        voice_triggered = True
+                        last_vision_analysis = 0
                     else:
                         text_queue.put(f"Speech: {text}")
                 except sr.UnknownValueError:
@@ -106,7 +122,17 @@ audio_thread.start()
 last_vision_analysis = time.time()
 
 # Initialize video capture
-cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+cap = cv2.VideoCapture(2)  # Try index 2 first
+
+if not cap.isOpened():
+    print("Failed to open camera 2, trying camera 1...")
+    cap = cv2.VideoCapture(1)  # Try index 1 as fallback
+
+if not cap.isOpened():
+    print("Failed to open OBS camera, falling back to default camera...")
+    cap = cv2.VideoCapture(0)  # Fallback to default camera
+
+print(f"Successfully opened camera with index: {cap.get(cv2.CAP_PROP_POS_FRAMES)}")
 
 # Add this function to handle text-to-speech conversion
 def text_to_speech(text):
