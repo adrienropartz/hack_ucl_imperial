@@ -52,8 +52,9 @@ def parse_opt():
     return opt
 
 
-def get_output(idx):
-    global _output, output, autocorrect, TIMING
+def get_output(idx, _output, output, autocorrect):
+    global TIMING
+    print("came")
     key = []
     for i in range(len(_output[idx])):
         character = _output[idx][i]
@@ -73,18 +74,19 @@ def get_output(idx):
 
     # Autocorrect Misspelled Word
     text = spell(text) if autocorrect else text
+    print(text)
 
     # Add word to output list
     if text != "":
         _output[idx] = []
         output.append(text.title())
+        print("appended", output)
     return None
 
 
-def recognize_gesture(image, results, model_letter_path):
-    global mp_drawing, current_hand
-    global output, _output
-
+def recognize_gesture(
+    image, results, model_letter_path, mp_drawing, current_hand, _output, output
+):
     multi_hand_landmarks = results.multi_hand_landmarks
     multi_handedness = results.multi_handedness
 
@@ -160,12 +162,12 @@ def recognize_gesture(image, results, model_letter_path):
 
             _gesture.append(gesture)
 
-    # Number of hands is decreasing, create "SPACE"
+    # create "SPACE"
     if isDecreased:
         if current_hand == 1:
-            get_output(0)
+            get_output(0, _output, output, autocorrect)
 
-    # Number of hands is the same, append gesture
+    # append gesture
     else:
         if results.multi_hand_landmarks is not None:
             _output[0].append(_gesture[0])
@@ -176,10 +178,11 @@ def recognize_gesture(image, results, model_letter_path):
     else:
         current_hand = 0
 
-    return image
+    return current_hand, image
 
 
 def recognize_signs(capture_idx: int):
+    current_hand = 0
     capture = cv2.VideoCapture(capture_idx)
     with mp_hands.Hands(
         min_detection_confidence=min_detection_confidence,
@@ -193,8 +196,6 @@ def recognize_signs(capture_idx: int):
                 break
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            frame_width = int(capture.get(3))  # get video frame width
-            frame_height = int(capture.get(4))  # get video frame height
 
             # To improve performance, optionally mark the image as not writeable to pass by reference
             image.flags.writeable = False
@@ -205,14 +206,18 @@ def recognize_signs(capture_idx: int):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             try:
-                image = recognize_gesture(
+                current_hand, image = recognize_gesture(
                     image,
                     results,
                     model_letter_path,
+                    mp_drawing,
+                    current_hand,
+                    _output,
+                    output,
                 )
                 print("new, out", output)
             except Exception as error:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
+                _, _, exc_tb = sys.exc_info()
                 print(f"{error}, line {exc_tb.tb_lineno}")
 
             # Show output in Top-Left corner
