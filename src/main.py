@@ -225,6 +225,9 @@ def recognize_signs(capture_idx: int):
 
             key = cv2.waitKey(5) & 0xFF
 
+            if output and output[-1] == "Z":
+                break
+
             # Press 'Esc' to quit
             if key == 27:
                 break
@@ -260,7 +263,8 @@ if __name__ == "__main__":
     print(f"Timing Threshold is {TIMING} frames.")
     print(f"Using Autocorrect: {autocorrect}")
 
-    # recognize_signs(1)
+    recognize_signs(0)
+    sys.exit()
 
     # Get video source path
     if source == None or source.isnumeric():
