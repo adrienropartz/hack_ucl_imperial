@@ -14,6 +14,7 @@ import pygame
 import tempfile
 import sounddevice as sd
 import numpy as np
+#import recognize_signs from sign_model
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,8 +29,7 @@ last_text = ""
 last_vision_text = ""
 text_timestamp = datetime.now()
 vision_timestamp = datetime.now()
-TEXT_DISPLAY_DURATION = timedelta(seconds=3)
-VISION_ANALYSIS_INTERVAL = 5  # Analyze image every 5 seconds
+TEXT_DISPLAY_DURATION = timedelta(seconds=10)
 voice_triggered = False
 
 # Initialize pygame mixer for audio playback
@@ -55,7 +55,7 @@ def analyze_image(frame):
                     "content": [
                         {
                             "type": "text", 
-                            "text": "As a friendly companion, describe what's immediately around us in 1-2 short sentences. Focus on the most important things: any nearby obstacles, people, or immediate safety concerns a visually impaired person should know about."
+                            "text": "As a friendly companion, describe what's immediately around us in 1-2 short sentences. Focus on the most important things: any nearby obstacles, people, or immediate safety concerns a visually impaired person should know about. Don't say more than 3 sentences."
                         },
                         {
                             "type": "image_url",
@@ -67,7 +67,7 @@ def analyze_image(frame):
                     ],
                 }
             ],
-            max_tokens=50  # Reduced token limit to ensure shorter responses
+            max_tokens=100  # Reduced token limit to ensure shorter responses
         )
         
         vision_queue.put(response.choices[0].message.content)
@@ -103,9 +103,8 @@ def audio_processing():
                     trigger_phrases = ["give me more info", "describe surroundings", "what's around", "describe the room"]
                     if any(phrase in text.lower() for phrase in trigger_phrases):
                         text_queue.put("Analyzing surroundings...")
-                        global voice_triggered, last_vision_analysis
+                        global voice_triggered
                         voice_triggered = True
-                        last_vision_analysis = 0
                     else:
                         text_queue.put(f"Speech: {text}")
                 except sr.UnknownValueError:
@@ -119,7 +118,6 @@ def audio_processing():
 audio_thread = threading.Thread(target=audio_processing, daemon=True)
 audio_thread.start()
 
-last_vision_analysis = time.time()
 
 # Initialize video capture
 cap = cv2.VideoCapture(2)  # Try index 2 first
@@ -179,21 +177,17 @@ while cap.isOpened():
     except queue.Empty:
         pass
 
-    # Periodic image analysis
-    current_time = time.time()
-    if current_time - last_vision_analysis > VISION_ANALYSIS_INTERVAL:
+    # Only analyze image when voice triggered
+    if voice_triggered:
         threading.Thread(target=analyze_image, args=(frame.copy(),), daemon=True).start()
-        last_vision_analysis = current_time
+        voice_triggered = False  # Reset the trigger
 
     # Update vision analysis text if available
     try:
         while not vision_queue.empty():
             last_vision_text = vision_queue.get_nowait()
             vision_timestamp = datetime.now()
-            # Only do text-to-speech if triggered by voice command
-            if voice_triggered:
-                threading.Thread(target=text_to_speech, args=(last_vision_text,), daemon=True).start()
-                voice_triggered = False  # Reset the trigger
+            threading.Thread(target=text_to_speech, args=(last_vision_text,), daemon=True).start()
     except queue.Empty:
         pass
 
