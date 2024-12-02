@@ -88,7 +88,7 @@ list_all_audio_devices()
 
 def audio_processing():
     recognizer = sr.Recognizer()
-    mic_index = 0 #0 for MAC MIC, 3 for MAC SPEAKER TO MIC 
+    mic_index = 5 #0 for MAC MIC, 3 for MAC SPEAKER TO MIC 
     
     while True:
         try:
@@ -122,7 +122,7 @@ audio_thread = threading.Thread(target=audio_processing, daemon=True)
 audio_thread.start()
 
 # Initialize video capture
-cap = cv2.VideoCapture(1)  #0 for MAC CAMERA, 1 for OBS CAMERA
+cap = cv2.VideoCapture(2)  #0 for MAC CAMERA, 1 for OBS CAMERA
 
 if not cap.isOpened():
     print("Failed to open camera 2, trying camera 1...")
