@@ -19,6 +19,10 @@ A real-time sign language interpreter and context-aware assistant that helps bri
 - **Audio Processing**: PyGame for audio playback
 - **Data Processing**: NumPy for numerical operations
 
+## Demo
+
+Note that we had to record the screen using a phone as we couldn't screen record while using OBS with OpenCV. Watch the [Demo](https://youtu.be/U1oAggfj_y8) to see the application in action.
+
 ## Setup
 
 1. Clone the repository:
