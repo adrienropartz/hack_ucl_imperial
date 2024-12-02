@@ -21,7 +21,8 @@ A real-time sign language interpreter and context-aware assistant that helps bri
 
 ## Setup
 
-1. Clone the repository:```bash
+1. Clone the repository:
+```bash
    git clone https://github.com/yourusername/sign-language-assistant.git
    cd sign-language-assistant
    ```
